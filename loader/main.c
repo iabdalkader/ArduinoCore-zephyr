@@ -6,6 +6,7 @@
 
 #include "zephyr/sys/printk.h"
 #include <zephyr/logging/log.h>
+
 LOG_MODULE_REGISTER(app);
 
 #include <zephyr/kernel.h>
