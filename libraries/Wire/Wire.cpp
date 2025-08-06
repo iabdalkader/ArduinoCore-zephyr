@@ -23,6 +23,7 @@ void arduino::ZephyrI2C::end() {}
 
 void arduino::ZephyrI2C::setClock(uint32_t freq) {
     uint8_t speed = 	I2C_SPEED_STANDARD;
+
 	if(freq >  0x06u ) {
 		if(freq == 100000) {
 		  speed = I2C_SPEED_STANDARD;
