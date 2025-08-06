@@ -1,0 +1,66 @@
+name: Format Check
+
+on:
+  push:
+    paths:
+      - 'libraries/**/*.{c,cc,h}'
+
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    paths:
+      - 'libraries/**/*.{c,cc,h}'
+
+jobs:
+  clang-format-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Install clang-format
+        run: sudo apt-get install -y clang-format
+
+      - name: Determine base ref
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_ref=origin/${{ github.event.pull_request.base.ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "base_ref=HEAD~1" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Find changed files
+        id: files
+        run: |
+          base_ref="${{ steps.base.outputs.base_ref }}"
+          git fetch origin $base_ref
+          git diff --name-only --diff-filter=ACMR "$base_ref" HEAD \
+            | grep -E '\.(c|cpp|h)$' \
+            | grep -E '^src/|^include/|^lib/' || true > changed-files.txt
+          echo "Files to check:"
+          cat changed-files.txt || echo "No matching files"
+
+      - name: Run clang-format checks
+        run: |
+          failed=0
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              echo "Checking $file"
+              diff_output=$(clang-format "$file" | diff -u "$file" -)
+              if [ -n "$diff_output" ]; then
+                echo "✖ Formatting issue in: $file"
+                echo "$diff_output"
+                failed=1
+              fi
+            fi
+          done < changed-files.txt
+
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::clang-format check failed"
+            exit 1
+          fi
+
+          echo "✔ All files are properly formatted."
