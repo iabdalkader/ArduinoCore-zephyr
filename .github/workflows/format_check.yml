@@ -2,17 +2,25 @@ name: Format Check
 
 on:
   push:
+    branches:
+      - 'main'
     paths:
       - '**/*.{c,cpp,cc,cxx,h,hpp}'
+
   pull_request:
-    types: [opened, edited, reopened, synchronize]
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+    branches:
+      - 'main'
     paths:
       - '**/*.{c,cpp,cc,cxx,h,hpp}'
 
 jobs:
   format-check:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
