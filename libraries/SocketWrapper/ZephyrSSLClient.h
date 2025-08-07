@@ -10,11 +10,12 @@
 class ZephyrSSLClient : public ZephyrClient {
 
 public:
-    int connect(const char* host, uint16_t port) override {
-        return connectSSL(host, port, nullptr);
-    }
-    int connect(const char* host, uint16_t port, char* cert) {
-        return connectSSL(host, port, cert);
-    }
+	int connect(const char *host, uint16_t port) override {
+		return connectSSL(host, port, nullptr);
+	}
+
+	int connect(const char *host, uint16_t port, char *cert) {
+		return connectSSL(host, port, cert);
+	}
 };
 #endif
