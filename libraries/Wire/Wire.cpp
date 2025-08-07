@@ -11,7 +11,8 @@ arduino::ZephyrI2C::ZephyrI2C(const struct device *i2c) : i2c_dev(i2c)
 {
 }
 
-void arduino::ZephyrI2C::begin() {
+void arduino::ZephyrI2C::begin()
+{
   ring_buf_init(&rxRingBuffer.rb, sizeof(rxRingBuffer.buffer), rxRingBuffer.buffer);
 }
 
