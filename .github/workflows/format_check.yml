@@ -5,7 +5,10 @@ on:
     branches:
       - 'main'
     paths:
-      - '**/*.{c,cpp,cc,cxx,h,hpp}'
+      - '**/*.c'
+      - '**/*.cpp'
+      - '**/*.h'
+      - '**/*.hpp'
 
   pull_request:
     types:
@@ -16,7 +19,10 @@ on:
     branches:
       - 'main'
     paths:
-      - '**/*.{c,cpp,cc,cxx,h,hpp}'
+      - '**/*.c'
+      - '**/*.cpp'
+      - '**/*.h'
+      - '**/*.hpp'
 
   workflow_dispatch:
     inputs:
