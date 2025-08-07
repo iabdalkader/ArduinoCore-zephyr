@@ -153,6 +153,7 @@ static int loader(const struct shell *sh)
 	}
 #else
 	// Assuming the sketch is stored in the same flash device as the loader
+
 	uint8_t* sketch_buf = (uint8_t*)base_addr;
 #endif
 
