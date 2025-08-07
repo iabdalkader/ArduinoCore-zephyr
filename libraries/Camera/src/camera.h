@@ -17,17 +17,18 @@
  */
 #ifndef __CAMERA_H__
 #define __CAMERA_H__
-/** 
+
+/**
  * @enum CameraPixelFormat
  * @brief Camera pixel format enumeration.
- * 
+ *
  * The different formats use different numbers of bits per pixel:
  * - Grayscale (8-bit)
  * - RGB565 (16-bit)
  */
 enum CameraPixelFormat {
-    CAMERA_RGB565,    /**< RGB565 format (16-bit). */
-    CAMERA_GRAYSCALE, /**< Grayscale format (8-bit). */
+	CAMERA_RGB565,    /**< RGB565 format (16-bit). */
+	CAMERA_GRAYSCALE, /**< Grayscale format (8-bit). */
 };
 
 /**
@@ -35,31 +36,31 @@ enum CameraPixelFormat {
  * @brief Frame buffer class for storing captured frames.
  */
 class FrameBuffer {
-    private:
-        struct video_buffer *vbuf;
+private:
+	struct video_buffer *vbuf;
 
-    public:
-        /**
-         * @brief Construct a new FrameBuffer object.
-         */
-        FrameBuffer();
+public:
+	/**
+	 * @brief Construct a new FrameBuffer object.
+	 */
+	FrameBuffer();
 
-        /**
-         * @brief Get the buffer size in bytes.
-         * @return uint32_t The buffer size in bytes.
-         */
-        uint32_t getBufferSize();
+	/**
+	 * @brief Get the buffer size in bytes.
+	 * @return uint32_t The buffer size in bytes.
+	 */
+	uint32_t getBufferSize();
 
-        /**
-         * @brief Get a pointer to the frame buffer.
-         * 
-         * This can be used to read the pixels from the frame buffer.
-         * For example, to print all pixels to the serial monitor as hex values.
-         * 
-         * @return uint8_t* Pointer to the frame buffer.
-         */
-        uint8_t* getBuffer();
-    friend class Camera;
+	/**
+	 * @brief Get a pointer to the frame buffer.
+	 *
+	 * This can be used to read the pixels from the frame buffer.
+	 * For example, to print all pixels to the serial monitor as hex values.
+	 *
+	 * @return uint8_t* Pointer to the frame buffer.
+	 */
+	uint8_t *getBuffer();
+	friend class Camera;
 };
 
 /**
@@ -67,61 +68,62 @@ class FrameBuffer {
  * @brief The main class for controlling a camera.
  */
 class Camera {
-    private:
-        bool byte_swap;
-        bool yuv_to_gray;
-        const struct device *vdev;
-        struct video_buffer *vbuf[CONFIG_VIDEO_BUFFER_POOL_NUM_MAX];
+private:
+	bool byte_swap;
+	bool yuv_to_gray;
+	const struct device *vdev;
+	struct video_buffer *vbuf[CONFIG_VIDEO_BUFFER_POOL_NUM_MAX];
 
-    public:
-        /**
-         * @brief Construct a new Camera object.
-         */
-        Camera();
+public:
+	/**
+	 * @brief Construct a new Camera object.
+	 */
+	Camera();
 
-        /**
-         * @brief Initialize the camera.
-         * 
-         * @param width Frame width in pixels.
-         * @param height Frame height in pixels.
-         * @param pixformat Initial pixel format (default: CAMERA_RGB565).
-         * @param byte_swap Enable byte swapping (default: false).
-         * @return true if the camera is successfully initialized, otherwise false.
-         */
-        bool begin(uint32_t width, uint32_t height, uint32_t pixformat = CAMERA_RGB565, bool byte_swap = false);
+	/**
+	 * @brief Initialize the camera.
+	 *
+	 * @param width Frame width in pixels.
+	 * @param height Frame height in pixels.
+	 * @param pixformat Initial pixel format (default: CAMERA_RGB565).
+	 * @param byte_swap Enable byte swapping (default: false).
+	 * @return true if the camera is successfully initialized, otherwise false.
+	 */
+	bool begin(uint32_t width, uint32_t height, uint32_t pixformat = CAMERA_RGB565,
+			   bool byte_swap = false);
 
-        /**
-         * @brief Capture a frame.
-         * 
-         * @param fb Reference to a FrameBuffer object to store the frame data.
-         * @param timeout Time in milliseconds to wait for a frame (default: 5000).
-         * @return true if the frame is successfully captured, otherwise false.
-         */
-        bool grabFrame(FrameBuffer &fb, uint32_t timeout = 5000);
+	/**
+	 * @brief Capture a frame.
+	 *
+	 * @param fb Reference to a FrameBuffer object to store the frame data.
+	 * @param timeout Time in milliseconds to wait for a frame (default: 5000).
+	 * @return true if the frame is successfully captured, otherwise false.
+	 */
+	bool grabFrame(FrameBuffer &fb, uint32_t timeout = 5000);
 
-        /**
-         * @brief Release a frame buffer.
-         * 
-         * @param fb Reference to a FrameBuffer object to release.
-         * @return true if the frame buffer is successfully released, otherwise false.
-         */
-        bool releaseFrame(FrameBuffer &fb);
+	/**
+	 * @brief Release a frame buffer.
+	 *
+	 * @param fb Reference to a FrameBuffer object to release.
+	 * @return true if the frame buffer is successfully released, otherwise false.
+	 */
+	bool releaseFrame(FrameBuffer &fb);
 
-        /**
-         * @brief Flip the camera image vertically.
-         * 
-         * @param flip_enable Set to true to enable vertical flip, false to disable.
-         * @return true on success, false on failure.
-         */
-        bool setVerticalFlip(bool flip_enable);
+	/**
+	 * @brief Flip the camera image vertically.
+	 *
+	 * @param flip_enable Set to true to enable vertical flip, false to disable.
+	 * @return true on success, false on failure.
+	 */
+	bool setVerticalFlip(bool flip_enable);
 
-        /**
-         * @brief Mirror the camera image horizontally.
-         * 
-         * @param mirror_enable Set to true to enable horizontal mirror, false to disable.
-         * @return true on success, false on failure.
-         */
-        bool setHorizontalMirror(bool mirror_enable);
+	/**
+	 * @brief Mirror the camera image horizontally.
+	 *
+	 * @param mirror_enable Set to true to enable horizontal mirror, false to disable.
+	 * @return true on success, false on failure.
+	 */
+	bool setHorizontalMirror(bool mirror_enable);
 };
 
 #endif // __CAMERA_H__

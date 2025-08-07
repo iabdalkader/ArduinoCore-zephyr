@@ -7,123 +7,122 @@
 #include <Wire.h>
 #include <zephyr/sys/util_macro.h>
 
-arduino::ZephyrI2C::ZephyrI2C(const struct device *i2c) : i2c_dev(i2c)
-{
+arduino::ZephyrI2C::ZephyrI2C(const struct device *i2c) : i2c_dev(i2c) {
 }
 
 void arduino::ZephyrI2C::begin() {
-  ring_buf_init(&rxRingBuffer.rb, sizeof(rxRingBuffer.buffer), rxRingBuffer.buffer);
+	ring_buf_init(&rxRingBuffer.rb, sizeof(rxRingBuffer.buffer), rxRingBuffer.buffer);
 }
 
 void arduino::ZephyrI2C::begin(uint8_t slaveAddr) {
-
 }
 
-void arduino::ZephyrI2C::end() {}
+void arduino::ZephyrI2C::end() {
+}
 
 void arduino::ZephyrI2C::setClock(uint32_t freq) {
-    uint8_t speed = 	I2C_SPEED_STANDARD;
-	if(freq >  0x06u ) {
-		if(freq == 100000) {
-		  speed = I2C_SPEED_STANDARD;
-		} else if(freq == 400000) {
-		  speed = I2C_SPEED_FAST;
-		} else if(freq == 1000000) {
-		  speed = I2C_SPEED_FAST_PLUS;
+	uint8_t speed = I2C_SPEED_STANDARD;
+	if (freq > 0x06u) {
+		if (freq == 100000) {
+			speed = I2C_SPEED_STANDARD;
+		} else if (freq == 400000) {
+			speed = I2C_SPEED_FAST;
+		} else if (freq == 1000000) {
+			speed = I2C_SPEED_FAST_PLUS;
 		} else {
-		  speed = I2C_SPEED_STANDARD;
+			speed = I2C_SPEED_STANDARD;
 		}
 	} else {
-		speed = (uint8_t) freq;
+		speed = (uint8_t)freq;
 	}
-	uint32_t i2c_cfg = I2C_MODE_CONTROLLER |
-					I2C_SPEED_SET(speed);
+	uint32_t i2c_cfg = I2C_MODE_CONTROLLER | I2C_SPEED_SET(speed);
 
 	if (i2c_configure(i2c_dev, i2c_cfg)) {
-		//Serial.println("Failed to configure i2c interface.");
+		// Serial.println("Failed to configure i2c interface.");
 	}
 }
 
 void arduino::ZephyrI2C::beginTransmission(uint8_t address) { // TODO for ADS1115
-  _address = address;
-  usedTxBuffer = 0;
+	_address = address;
+	usedTxBuffer = 0;
 }
 
 uint8_t arduino::ZephyrI2C::endTransmission(bool stopBit) {
-  int ret = i2c_write(i2c_dev, txBuffer, usedTxBuffer, _address);
-  if (ret) {
-    return 1; // fail
-  }
-  return 0;
+	int ret = i2c_write(i2c_dev, txBuffer, usedTxBuffer, _address);
+	if (ret) {
+		return 1; // fail
+	}
+	return 0;
 }
 
 uint8_t arduino::ZephyrI2C::endTransmission(void) { // TODO for ADS1115
-  return endTransmission(true);
+	return endTransmission(true);
 }
 
-size_t arduino::ZephyrI2C::requestFrom(uint8_t address, size_t len,
-                                       bool stopBit) {
-  uint8_t buf[len];
-  int ret = i2c_read(i2c_dev, buf, len, address);
-  if (ret != 0)
-  {
-    return 0;
-  }
-  ret = ring_buf_put(&rxRingBuffer.rb, buf, len);
-  if (ret == 0)
-  {
-    return 0;
-  }
-  return len;
+size_t arduino::ZephyrI2C::requestFrom(uint8_t address, size_t len, bool stopBit) {
+	uint8_t buf[len];
+	int ret = i2c_read(i2c_dev, buf, len, address);
+	if (ret != 0) {
+		return 0;
+	}
+	ret = ring_buf_put(&rxRingBuffer.rb, buf, len);
+	if (ret == 0) {
+		return 0;
+	}
+	return len;
 }
 
 size_t arduino::ZephyrI2C::requestFrom(uint8_t address, size_t len) { // TODO for ADS1115
-  return requestFrom(address, len, true);
+	return requestFrom(address, len, true);
 }
 
-size_t arduino::ZephyrI2C::write(uint8_t data) {  // TODO for ADS1115
-  txBuffer[usedTxBuffer++] = data;
-  return 1;
+size_t arduino::ZephyrI2C::write(uint8_t data) { // TODO for ADS1115
+	txBuffer[usedTxBuffer++] = data;
+	return 1;
 }
 
 size_t arduino::ZephyrI2C::write(const uint8_t *buffer, size_t size) {
-    if (usedTxBuffer + size > 256) {
-    size = 256 - usedTxBuffer;
-  }
+	if (usedTxBuffer + size > 256) {
+		size = 256 - usedTxBuffer;
+	}
 	memcpy(txBuffer + usedTxBuffer, buffer, size);
-	usedTxBuffer += size;	
-  return size;
+	usedTxBuffer += size;
+	return size;
 }
 
 int arduino::ZephyrI2C::read() {
-  uint8_t buf[1];
-  if (ring_buf_size_get(&rxRingBuffer.rb)) {
-        int ret = ring_buf_get(&rxRingBuffer.rb, buf, 1);
-        if (ret == 0) {
-            return -1;
-        }
+	uint8_t buf[1];
+	if (ring_buf_size_get(&rxRingBuffer.rb)) {
+		int ret = ring_buf_get(&rxRingBuffer.rb, buf, 1);
+		if (ret == 0) {
+			return -1;
+		}
 		return (int)buf[0];
-  }
-  return -1;
+	}
+	return -1;
 }
 
 int arduino::ZephyrI2C::available() {
-  return ring_buf_size_get(&rxRingBuffer.rb);
+	return ring_buf_size_get(&rxRingBuffer.rb);
 }
 
 int arduino::ZephyrI2C::peek() {
-  uint8_t buf[1];
-  int bytes_read = ring_buf_peek(&rxRingBuffer.rb, buf, 1);
-  if (bytes_read == 0){
-    return 0;
-  } 
-  return (int)buf[0];
+	uint8_t buf[1];
+	int bytes_read = ring_buf_peek(&rxRingBuffer.rb, buf, 1);
+	if (bytes_read == 0) {
+		return 0;
+	}
+	return (int)buf[0];
 }
 
-void arduino::ZephyrI2C::flush() {}
+void arduino::ZephyrI2C::flush() {
+}
 
-void arduino::ZephyrI2C::onReceive(voidFuncPtrParamInt cb) {}
-void arduino::ZephyrI2C::onRequest(voidFuncPtr cb) {}
+void arduino::ZephyrI2C::onReceive(voidFuncPtrParamInt cb) {
+}
+
+void arduino::ZephyrI2C::onRequest(voidFuncPtr cb) {
+}
 
 #if DT_NODE_HAS_PROP(DT_PATH(zephyr_user), i2cs)
 #if (DT_PROP_LEN(DT_PATH(zephyr_user), i2cs) > 1)
