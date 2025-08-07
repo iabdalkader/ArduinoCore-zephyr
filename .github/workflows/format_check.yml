@@ -18,6 +18,13 @@ on:
     paths:
       - '**/*.{c,cpp,cc,cxx,h,hpp}'
 
+workflow_dispatch:
+  inputs:
+    logLevel:
+      description: 'Log level'     
+      required: true
+      default: 'warning'
+
 jobs:
   format-check:
     runs-on: ubuntu-latest
