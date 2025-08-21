@@ -280,7 +280,7 @@ void delay(unsigned long ms) {
 }
 
 void delayMicroseconds(unsigned int us) {
-	k_sleep(K_USEC(us));
+	k_busy_wait(us);
 }
 
 unsigned long micros(void) {
