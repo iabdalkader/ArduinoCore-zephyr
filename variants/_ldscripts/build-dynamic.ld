@@ -42,12 +42,6 @@ SECTIONS {
         __static_thread_data_list_end = .;
     }
 
-    .rodata : {
-        *(.rodata)
-        *(.rodata1)
-        *(.rodata.*)
-    }
-
     .data : {
         *(.data .data.*)
     }
@@ -80,10 +74,6 @@ SECTIONS {
 
     .shstrtab : {
         KEEP(*(.shstrtab))
-    }
-
-    .rel : {
-        KEEP(*(.rel .rel.*))
     }
 
     .got : {
