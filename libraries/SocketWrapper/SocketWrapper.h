@@ -1,9 +1,13 @@
 #pragma once
 
 #include "zephyr/sys/printk.h"
+#if defined(CONFIG_FILE_SYSTEM)
+#include <zephyr/fs/fs.h>
+#endif
+
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
 #include <zephyr/net/tls_credentials.h>
-#define CA_CERTIFICATE_TAG 1
+#define CA_CERTIFICATE_TAG_BASE 1
 #endif
 
 #include <zephyr/net/socket.h>
@@ -13,6 +17,47 @@ protected:
 	int sock_fd;
 	bool is_ssl = false;
 	int ssl_sock_temp_char = -1;
+
+#if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS) && defined(CONFIG_FILE_SYSTEM)
+	inline static char *cadata = nullptr;
+
+	bool loadCADataFromFS(const char *cert_path = "/wlan:/cacert.pem") {
+		struct fs_file_t file;
+		fs_file_t_init(&file);
+
+		if (fs_open(&file, cert_path, FS_O_READ) != 0) {
+			return false;
+		}
+
+		// Get file size
+		struct fs_dirent entry;
+		if (fs_stat(cert_path, &entry) != 0) {
+			fs_close(&file);
+			return false;
+		}
+
+		size_t file_size = entry.size;
+
+		// Allocate buffer for entire file
+		cadata = (char *)k_malloc(file_size);
+		if (!cadata) {
+			fs_close(&file);
+			return false;
+		}
+
+		// Read entire file
+		ssize_t bytes_read = fs_read(&file, cadata, file_size);
+		fs_close(&file);
+
+		if (bytes_read != file_size) {
+			k_free(cadata);
+			cadata = nullptr;
+			return false;
+		}
+
+		return true;
+	}
+#endif
 
 public:
 	ZephyrSocketWrapper() : sock_fd(-1) {
@@ -102,7 +147,7 @@ public:
 	}
 
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
-	bool connectSSL(const char *host, uint16_t port, const char *ca_certificate_pem = nullptr) {
+	bool connectSSL(const char *host, uint16_t port, const char *cert = nullptr) {
 
 		// Resolve address
 		struct addrinfo hints = {0};
@@ -115,9 +160,9 @@ public:
 		int ret;
 		bool rv = false;
 
-		sec_tag_t sec_tag_opt[] = {
-			CA_CERTIFICATE_TAG,
-		};
+		sec_tag_t sec_tag_opt[2];
+		int tag_count = 0;
+		int tag = CA_CERTIFICATE_TAG_BASE;
 
 		struct timeval timeout_opt = {
 			.tv_sec = 0,
@@ -138,12 +183,29 @@ public:
 			goto exit;
 		}
 
-		if (ca_certificate_pem != nullptr) {
-			ret = tls_credential_add(CA_CERTIFICATE_TAG, TLS_CREDENTIAL_CA_CERTIFICATE,
-									 ca_certificate_pem, strlen(ca_certificate_pem) + 1);
-			if (ret != 0) {
+#if defined(CONFIG_FILE_SYSTEM)
+		// Try to load builtin CA from filesystem (once)
+		if (cadata == nullptr && loadCADataFromFS()) {
+			// Successfully loaded, add with tag (ignore errors)
+			if (tls_credential_add(tag++, TLS_CREDENTIAL_CA_CERTIFICATE, cadata,
+								   strlen(cadata) + 1)) {
 				goto exit;
 			}
+		}
+#endif
+
+		// Add custom CA if provided (uses next available tag)
+		if (cert != nullptr) {
+			if (tls_credential_add(tag++, TLS_CREDENTIAL_CA_CERTIFICATE, cert, strlen(cert) + 1) !=
+				0) {
+				goto exit;
+			}
+		}
+
+		// Build sequential tag list
+		tag_count = tag - CA_CERTIFICATE_TAG_BASE;
+		for (int i = 0; i < tag_count; i++) {
+			sec_tag_opt[i] = CA_CERTIFICATE_TAG_BASE + i;
 		}
 
 		sock_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TLS_1_2);
@@ -152,7 +214,8 @@ public:
 		}
 
 		if (setsockopt(sock_fd, SOL_TLS, TLS_HOSTNAME, host, strlen(host)) ||
-			setsockopt(sock_fd, SOL_TLS, TLS_SEC_TAG_LIST, sec_tag_opt, sizeof(sec_tag_opt)) ||
+			setsockopt(sock_fd, SOL_TLS, TLS_SEC_TAG_LIST, sec_tag_opt,
+					   sizeof(sec_tag_t) * tag_count) ||
 			setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout_opt, sizeof(timeout_opt))) {
 			goto exit;
 		}
