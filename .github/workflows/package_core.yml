@@ -27,7 +27,7 @@ jobs:
         run: |
           sudo apt-get remove --purge man-db -y # skips the mandb triggers
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache
+          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build
 
       - uses: actions/checkout@v4
         with:
@@ -87,12 +87,16 @@ jobs:
 
       - name: Restore build environment
         run: |
+          sudo apt-get remove --purge man-db -y # skips the mandb triggers
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends git cmake wget python3-pip ninja-build ccache
           (cd ~ && tar --use-compress-program=unzstd -xpf build-env.tar.zstd && rm build-env.tar.zstd)
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           verbose: 1
+          key: ${{ github.job }}-${{ matrix.board }} # independent caches
 
       - name: Build loader
         shell: bash
