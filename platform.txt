@@ -40,11 +40,11 @@ compiler.zephyr.includes_file={build.variant.path}/includes.txt
 compiler.zephyr.cflags_file={build.variant.path}/cflags.txt
 compiler.zephyr.cxxflags_file={build.variant.path}/cxxflags.txt
 compiler.zephyr.macros="-imacros{build.variant.path}/llext-edk/include/zephyr/include/generated/zephyr/autoconf.h" "-imacros{build.variant.path}/llext-edk/include/zephyr/include/zephyr/toolchain/zephyr_stdint.h"
-compiler.zephyr.common_cxxflags=-fdata-sections -ffunction-sections -fno-unwind-tables
+compiler.zephyr.common_cxxflags=-fno-exceptions -fno-rtti -fdata-sections -ffunction-sections -fno-unwind-tables
 compiler.zephyr.common_ldflags=-fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-unwind-tables -fno-use-cxa-atexit -lstdc++ -lsupc++ -lnosys -nostdlib
 
 compiler.zephyr.extra_cxxflags=
-compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++
+compiler.zephyr.extra_ldflags=-lstdc++ -lsupc++ -lm
 
 # these can be overriden in boards.txt
 build.extra_flags=
@@ -54,7 +54,7 @@ build.boot_mode=wait
 upload.extension=elf-zsk.bin
 
 build.ldscript.path={runtime.platform.path}/variants/_ldscripts
-build.link_command="{compiler.path}{compiler.c.elf.cmd}" "-L{build.path}" "-L{build.variant.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} --specs=picolibc.specs --specs=nosys.specs {compiler.ldflags} {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group {build.link_args.{build.link_mode}}
+build.link_command="{compiler.path}{compiler.c.elf.cmd}" "-L{build.path}" "-L{build.variant.path}" {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {build.extra_flags} {build.extra_ldflags} {compiler.zephyr.common_ldflags} --specs=nano.specs --specs=nosys.specs {compiler.ldflags} {object_files} -Wl,--start-group "{build.path}/{archive_file}" {compiler.zephyr.extra_ldflags} {compiler.libraries.ldflags} -Wl,--end-group {build.link_args.{build.link_mode}}
 
 build.check_command-dynamic={build.link_command} {build.link_args.check-dynamic} -o "{build.path}/{build.project_name}_check.tmp"
 build.check_command-static=true
@@ -63,7 +63,7 @@ build.combine_command={build.link_command} {build.link_args.build-{build.link_mo
 
 # link_args.* are included by any link_command depending on the link_mode
 build.link_args.dynamic=-e main
-build.link_args.static=-lc -lm -lgcc -Wl,--wrap=random -Wl,--wrap=calloc -Wl,--wrap=free -Wl,--wrap=malloc -Wl,--wrap=realloc
+build.link_args.static=-Wl,--wrap=random -Wl,--wrap=calloc -Wl,--wrap=free -Wl,--wrap=malloc -Wl,--wrap=realloc
 
 # link_args.check-* are used to check the build. Only LLEXT needs these to emulate a static build (no -r!).
 build.link_args.check-dynamic="-T{build.variant.path}/syms-dynamic.ld" "-T{build.ldscript.path}/memory-check.ld" "-T{build.ldscript.path}/build-static.ld"
