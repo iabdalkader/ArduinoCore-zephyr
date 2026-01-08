@@ -19,7 +19,6 @@ SECTIONS {
         *stdexcept.o
         *eh_*.o
         *cow-stdexcept.o
-        *functexcept.o
         *cow-string-inst.o
     }
 

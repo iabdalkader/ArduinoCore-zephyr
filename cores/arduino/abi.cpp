@@ -5,19 +5,13 @@
  */
 
 #include <stdlib.h>
-
-namespace std {
-void __throw_length_error(const char *__s __attribute__((unused))) {
-}
-
-void __throw_bad_alloc() {
-}
-
-void __throw_bad_function_call() {
-}
-}; // namespace std
+#include <zephyr/kernel.h>
 
 extern "C" {
+
+void abort(void) {
+	k_panic();
+}
 
 void *__dso_handle = (void *)&__dso_handle;
 
@@ -37,6 +31,12 @@ int __cxa_atexit(void (*func)(void *), void *arg, void *dso_handle) {
 int atexit(void (*func)(void)) {
 	(void)func;
 	return 0;
+}
+
+static int __errno_val;
+
+int *__errno(void) {
+	return &__errno_val;
 }
 
 int strcmp(const char *s1, const char *s2) {
