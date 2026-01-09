@@ -38,6 +38,6 @@
 
 		serials = <&uart0>;
 		i2cs = <&i2c1>;
-		spis = <&spi1>;
+		spis = <>; /* spi0, conflicts with uart0 */
 	};
 };
