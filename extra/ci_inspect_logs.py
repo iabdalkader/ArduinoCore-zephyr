@@ -82,7 +82,68 @@ class LoaderEntry:
         self.variant = variant
         self.job_link = job_link
 
-        self.status = PASS
+        self.warnings = self.read_warnings() # list of warning messages
+        self.config = self.read_config() # set of Kconfig settings
+        self.meminfo = self.read_meminfo() # memory usage report
+
+        if not (self.config and self.meminfo):
+            self.status = FAILURE
+        elif self.warnings:
+            self.status = WARNING
+        else:
+            self.status = PASS
+
+    def read_config(self):
+        """
+        Extract Kconfig settings from the loader config file.
+        Format: SYMBOL=VALUE per line or # comment lines for disabled symbols.
+        """
+        report_file = f"zephyr-{self.variant}.config"
+        try:
+            with open(report_file, 'r') as f:
+                configs = {}
+                for line in f:
+                    if line.startswith('#') or '=' not in line:
+                        continue
+                    sym, val = line.strip().split('=', 1)
+                    if val.startswith('"'):
+                        configs[sym] = val.strip('"')
+                    elif val=='y':
+                        configs[sym] = 1
+                    else:
+                        configs[sym] = eval(val)
+                return configs
+        except Exception as e:
+            return {}
+
+    def read_warnings(self):
+        """
+        Read loader compilation warnings from the warnings file.
+        File may be missing in case of no warnings.
+        Format: one line per warning message.
+        """
+        report_file = f"zephyr-{self.variant}.warnings"
+        try:
+            with open(report_file, 'r') as f:
+                return [ line.strip() for line in f if line.strip() ]
+        except Exception as e:
+            return []
+
+    def read_meminfo(self):
+        """
+        Extract memory usage data from the meminfo file.
+        Input format: JSON array of region_name, used_bytes, total_bytes tuples
+        Output format: dict of { region_name: [ used_bytes, total_bytes ] }
+        """
+        report_file = f"zephyr-{self.variant}.meminfo"
+        try:
+            with open(report_file, 'r') as f:
+                report_data = json.load(f)
+                meminfo = { region.replace(':',''): [used, total] for region, used, total in report_data }
+                meminfo.pop('IDT_LIST', None)
+                return meminfo
+        except Exception as e:
+            return {}
 
 # Single test data structure, one per compilation test
 class TestEntry:
@@ -213,7 +274,7 @@ def print_summary():
 
             # Core build status + message on failure
             if res.status == FAILURE:
-                f_print(f"<td align='center'>{BOARD_STATUS[FAILURE]}</td><td colspan='5'>Core build failed!</td></tr>")
+                f_print(f"<td align='center'>{BOARD_STATUS[FAILURE]}</td><td colspan='6'>Core build failed!</td></tr>")
                 continue
 
             pin = f"{len(res.warnings)} :label:" if res.status == WARNING else ":green_book:"
@@ -223,10 +284,13 @@ def print_summary():
             res = BOARD_TESTS[board]
             f_print(f"<td align='center'>{BOARD_STATUS[res.status]}</td>")
             if res.status == FAILURE:
-                f_print(f"<td colspan='4'>")
+                f_print(f"<td colspan='5'>")
                 f_print("<br>".join(f"{test.issues[0]} (<a href='{test.job_link}'>full log</a>)" for test in res.tests))
                 f_print("</td></tr>")
                 continue
+
+            # Memory usage
+            f_print(f"<td align='right'>\n\n{color_entry(BOARD_LOADERS[board].meminfo['RAM'], False)}\n\n</td>")
 
             # Test count summary
             tests_str = len(res.tests) or "-"
@@ -368,6 +432,119 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
 
             f_print("</table></blockquote></details>\n")
 
+REGIONS_BY_SOC = defaultdict(set)     # { soc: set(regions) }
+
+BASE_COLOR = 0x20               # darkest tone
+DELTA_COLOR = 0xff-2*BASE_COLOR # max color change (brightest tone - darkest tone)
+
+def get_percent(values):
+    if not values:
+        return 0.0
+    return values[0] / values[1]
+
+def color_cmd(percent):
+    """
+    Returns a LaTeX color command string based on the given percentage.
+    The color hue transitions linearly from fully green (0) to fully red (1).
+    """
+    color_amt = int(DELTA_COLOR * percent)
+    return f"\\color{{#{BASE_COLOR + color_amt:02x}{0xff - color_amt:02x}{BASE_COLOR:02x}}}"
+
+def color_entry(values, full=True):
+    """
+    Returns a colored LaTeX-formatted string representing memory usage.
+    If full is True, shows used/total as a fraction and percent; otherwise shows only percent.
+    """
+    if not values:
+        return ""
+
+    percent = get_percent(values)
+    if full:
+        return f"${{{color_cmd(percent)}\\frac{{{values[0]}}}{{{values[1]}}}\\space({percent*100:0.1f}\\\\%)}}$"
+    else:
+        return f"{'' if percent < 0.85 else ':warning:'} ${{{color_cmd(percent)}{percent*100:0.1f}\\\\%}}$"
+
+def print_mem_report(artifact, artifact_boards):
+    """
+    Prints the memory usage report for the given artifact and its boards.
+    """
+
+    # Header row, 10 columns:
+    #  - Icon for high usage
+    #  - Board name
+    #  - SoC
+    #  - FLASH usage
+    #  - RAM usage
+    #  - User sketch size
+    #  - User heaps: SYS, LIBC
+    #  - OS heaps: LLEXT, MBEDTLS
+    f_print("<table><tr>", end='')
+    f_print("<th rowspan='2' colspan='2'>Board</th>", end='')
+    f_print("<th rowspan='2'>SoC</th>", end='')
+    f_print("<th rowspan='2'>FLASH</th>", end='')
+    f_print("<th rowspan='2'>RAM</th>", end='')
+    f_print("<th colspan='2'>User heaps</th>", end='')
+    f_print("<th colspan='2'>OS heaps</th>", end='')
+    f_print("</tr>")
+    f_print("<tr><th>SYS</th><th>LIBC</th><th>LLEXT</th><th>MBEDTLS</th></tr>")
+
+    # Data rows
+    for soc, board in sorted((ALL_BOARD_DATA[board]['soc'], board) for board in artifact_boards):
+        max_pct = max([ get_percent(BOARD_LOADERS[board].meminfo[r]) for r in ('FLASH', 'RAM') ])
+        icon = ':warning:' if max_pct > 0.85 else ''
+        board_str = board.replace('_', '\\\\_')
+
+        row = [
+                icon,
+                f"${{{color_cmd(max_pct)}\\texttt{{{board_str}}}}}$",
+                f"<code>{soc}</code>",
+                color_entry(BOARD_LOADERS[board].meminfo['FLASH']),
+                color_entry(BOARD_LOADERS[board].meminfo['RAM']),
+                f"${{{ BOARD_LOADERS[board].config.get('CONFIG_HEAP_MEM_POOL_SIZE', 0) }}}$",
+                f"${{{ BOARD_LOADERS[board].config['CONFIG_SRAM_SIZE']*1024 - BOARD_LOADERS[board].meminfo['RAM'][0] }}}$",
+                f"${{{ BOARD_LOADERS[board].config['CONFIG_LLEXT_HEAP_SIZE']*1024 }}}$",
+                f"${{{ BOARD_LOADERS[board].config.get('CONFIG_MBEDTLS_HEAP_SIZE', '-') }}}$"
+              ]
+
+        # Print each cell with its own alignment
+        f_print("<tr>")
+        col_aligns = ['center', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right']
+        for index, cell in enumerate(row):
+            f_print(f"<td align='{col_aligns[index]}'>\n\n{cell}\n\n</td>")
+        f_print("</tr>")
+    f_print("</table>")
+
+    # Gather SoC-specific regions by SoC
+    extra_data_present = False
+    for soc in sorted(list(set([ ALL_BOARD_DATA[board]['soc'] for board in artifact_boards ]))):
+        soc_boards = [ board for board in artifact_boards if ALL_BOARD_DATA[board]['soc'] == soc ]
+        sorted_regions = sorted(r for r in REGIONS_BY_SOC[soc] if r not in ('FLASH', 'RAM'))
+        if not sorted_regions:
+            continue
+
+        # this soc has extra regions to report, add details header if not done yet
+        if not extra_data_present:
+            f_print("<details><summary>SoC-specific data</summary><blockquote><br>\n")
+            extra_data_present = True
+
+        f_print(f"<table><tr><th rowspan='{len(soc_boards)+1}'><code>{soc}</code></th><th>Board</th>")
+        for r in sorted_regions:
+              f_print(f"<th>{r}</th>")
+        f_print("</tr>")
+        for board in sorted(soc_boards):
+            f_print(f"<tr><th><code>{board}</code></th>")
+            for r in sorted_regions:
+                # Some regions may be missing on some boards depending on build config
+                if r in BOARD_LOADERS[board].meminfo:
+                    f_print(f"<td>\n\n{color_entry(BOARD_LOADERS[board].meminfo[r])}\n\n</td>")
+                else:
+                    f_print(f"<td></td>")
+            f_print("</tr>")
+        f_print("</table>\n")
+
+    # Close extra data details if opened
+    if extra_data_present:
+        f_print("</blockquote></details>")
 
 
 
@@ -425,7 +602,12 @@ for board_data in ALL_BOARD_DATA.values():
         log_test(artifact, board, 'CI test', '', [], FAILURE, "Core data could not be read.")
         continue
 
-    # Get list of expected errors for this board/variant
+    # Get SoC-specific info from loader config
+    soc = BOARD_LOADERS[board].config['CONFIG_SOC']
+    board_data['soc'] = soc
+    REGIONS_BY_SOC[soc].update(BOARD_LOADERS[board].meminfo.keys())
+
+    # Get list of expected errors for this board
     exceptions = []
     if os.path.exists(f"variants/{variant}/known_example_issues.txt"):
         with open(f"variants/{variant}/known_example_issues.txt", 'r') as f:
@@ -508,6 +690,23 @@ with open(full_report_file, 'w') as f:
         f_print(f"<a name='{artifact}'></a>")
         f_print("\n---\n")
 
+        # print loader build warnings, if any
+        if any(BOARD_LOADERS[board].status != PASS for board in artifact_boards):
+            summary = f"<code>{artifact}</code> loader build warnings"
+            f_print(f"<details><summary>{summary}</summary><blockquote><br>\n")
+            f_print("<table>")
+            f_print("<tr><th>Board</th><th>Warnings</th></tr>")
+            for board in artifact_boards:
+                if BOARD_LOADERS[board].status == PASS:
+                    continue
+                f_print(f"<tr><td><code>{board}</code></td><td><pre>")
+                for warning in BOARD_LOADERS[board].warnings:
+                    f_print(warning)
+                f_print("</pre></td></tr>")
+            f_print("</table>\n")
+            f_print("</blockquote></details>\n")
+
+        # print failed tests matrix
         print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status in (ERROR, EXPECTED_ERROR) or res.tests_with_invalid_exceptions)
 
         # print successful tests matrix in a collapsible section
@@ -521,3 +720,8 @@ with open(full_report_file, 'w') as f:
             f_print(f"<details><summary>{summary}</summary><blockquote><br>\n")
             print_test_matrix(artifact, artifact_boards, "tests", sketch_filter=lambda res: res.status in (PASS, WARNING))
             f_print("</blockquote></details>\n")
+
+        # print memory usage report in a collapsible section
+        f_print(f"<details><summary>Memory usage report for <code>{artifact}</code></summary><blockquote><br>")
+        print_mem_report(artifact, artifact_boards)
+        f_print("</blockquote></details>")
