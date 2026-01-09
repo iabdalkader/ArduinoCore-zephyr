@@ -379,6 +379,7 @@ jobs:
     if: ${{ !cancelled() }}
     env:
       ALL_BOARD_DATA: ${{ needs.build-env.outputs.ALL_BOARD_DATA }}
+      CORE_VER: ${{ needs.build-env.outputs.CORE_VER }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
     steps:
@@ -405,6 +406,25 @@ jobs:
           cat summary >> $GITHUB_STEP_SUMMARY
           cat full_log >> $GITHUB_STEP_SUMMARY
 
+          # Create a comment for PRs using the summary file
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            mkdir -p comment-request
+            echo "${{ github.event.pull_request.number }}" > comment-request/pr_number
+            echo -e "## Built \`$CORE_VER\`\n" > comment-request/comment_body
+            # strip LaTeX color commands and escape sequences for mail readability
+            cat summary | sed -e 's!\${\\color{\S*}\(.*\)}\$!\1!g' -e 's!\\%!%!g' >> comment-request/comment_body
+          fi
+
+      # upload comment request artifact (will be retrieved by leave_pr_comment.yml)
+      - name: Archive comment information
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          name: comment-request
+          path: comment-request/
+          retention-days: 1
+
+      # teports are no longer needed now
       - name: Clean up intermediate artifacts
         uses: geekyeggo/delete-artifact@v5.1.0
         with:
