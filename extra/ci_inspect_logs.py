@@ -42,13 +42,15 @@ import sys
 SKIP = -1           # Test was not performed
 PASS = 0            # (PASS)  Compiled successfully
 WARNING = 1         # (PASS)  Compiled with warnings
-ERROR = 2           # (FAIL)  Compilation failed with errors
-FAILURE = 3         # Test run failed to complete
+EXPECTED_ERROR = 2  # (PASS*) Compilation failed with expected errors
+ERROR = 3           # (FAIL)  Compilation failed with errors
+FAILURE = 4         # Test run failed to complete
 
 # Status legends and icons, indexed by status constant
 TEST_LEGEND = [
         "Test passed successfully, with no warnings or errors.",
         "Test completed with some warnings; no errors detected.",
+        "Test completed with errors, but all are known/expected.",
         "Test completed with unexpected errors.",
         "Test run failed to complete.",
         "Test was skipped." # -1
@@ -57,6 +59,7 @@ TEST_LEGEND = [
 TEST_STATUS = [
     ":green_circle:",
     ":yellow_circle:",
+    ":no_entry_sign:",
     ":red_circle:",
     ":fire:",
     ":new_moon:" # -1
@@ -65,6 +68,7 @@ TEST_STATUS = [
 BOARD_STATUS = [
     ":white_check_mark:",
     ":white_check_mark:*",
+    ":heavy_check_mark:*",
     ":x:",
     ":fire:",
     ":new_moon:" # -1
@@ -82,13 +86,15 @@ class LoaderEntry:
 
 # Single test data structure, one per compilation test
 class TestEntry:
-    def __init__(self, artifact, board, sketch, status, issues, job_link):
+    def __init__(self, artifact, board, sketch, excepted, status, issues, job_link):
         self.artifact = artifact
         self.board = board
         self.sketch = sketch
-        self.status = status
+        self.excepted = excepted
+        self.status = EXPECTED_ERROR if excepted and status == ERROR else status
         self.issues = issues
         self.job_link = job_link
+        self.invalid_exception = excepted and status in (PASS, WARNING)
 
         # Extract group and name from sketch path:
         #                   (1.................) (2....) (3................) (4.)
@@ -108,12 +114,13 @@ class TestGroup:
         self.sketches = set()
         self.group_names = set()
         # Counts of test results by status
-        self.counts = { status : 0 for status in [PASS, WARNING, ERROR, FAILURE] }
+        self.counts = { status : 0 for status in [PASS, WARNING, EXPECTED_ERROR, ERROR, FAILURE] }
         # Overall status of the group
         self.status = SKIP
-        # List of individual TestEntry objects (all, only with issues)
+        # List of individual TestEntry objects by feature
         self.tests = []
         self.tests_with_issues = []
+        self.tests_with_invalid_exceptions = []
 
     def track(self, test_entry):
         """
@@ -122,6 +129,8 @@ class TestGroup:
         self.tests.append(test_entry)
         if test_entry.issues:
             self.tests_with_issues.append(test_entry)
+        if test_entry.invalid_exception:
+            self.tests_with_invalid_exceptions.append(test_entry)
 
         self.counts[test_entry.status] += 1
         self.status = max(self.status, test_entry.status)
@@ -141,7 +150,7 @@ ARTIFACT_TESTS = defaultdict(TestGroup)                     # { artifact: TestGr
 BOARD_TESTS = defaultdict(TestGroup)                        # { board: TestGroup() }
 SKETCH_TESTS = defaultdict(lambda: defaultdict(TestGroup))  # { artifact: { sketch: TestGroup() } }
 
-def log_test(artifact, board, sketch, status, issues, job_link=None):
+def log_test(artifact, board, sketch, exceptions, status, issues, job_link=None):
     """
     Logs individual test results into the global test tracking structures.
     """
@@ -151,7 +160,8 @@ def log_test(artifact, board, sketch, status, issues, job_link=None):
         issues = [ issues ]
 
     # Create the test entry
-    test_entry = TestEntry(artifact, board, sketch, status, issues, job_link)
+    excepted = any(pattern.match(sketch) for pattern in exceptions)
+    test_entry = TestEntry(artifact, board, sketch, excepted, status, issues, job_link)
 
     # Track in global structures
     ARTIFACT_TESTS[artifact].track(test_entry)
@@ -222,13 +232,18 @@ def print_summary():
             tests_str = len(res.tests) or "-"
             warnings_str = res.counts[WARNING] or "-"
             errors_str = f"<b>{res.counts[ERROR]}</b>" if res.counts[ERROR] else "-"
+            if res.counts[EXPECTED_ERROR]:
+                if errors_str == "-": # only expected errors
+                    errors_str = f"<i>({res.counts[EXPECTED_ERROR]}*)</i>"
+                else: # both actual and expected errors
+                    errors_str += f" <i>(+{res.counts[EXPECTED_ERROR]}*)</i>"
             f_print(f"<td align='right'>{tests_str}</td><td align='right'>{warnings_str}</td><td align='right'>{errors_str}</td></tr>")
     f_print("</table>\n")
 
     # Print the legend
     f_print("<details><summary>Legend</summary>")
     f_print("<blockquote><br><table><tr><th align='center'>Board</th><th align='center'>Test</th><th>Status description</th></tr>")
-    for status in FAILURE, ERROR, WARNING, PASS, SKIP:
+    for status in FAILURE, ERROR, EXPECTED_ERROR, WARNING, PASS, SKIP:
         f_print(f"<tr><td align='center'>{BOARD_STATUS[status]}</td>")
         f_print(f"<td align='center'>{TEST_STATUS[status]}</td>")
         f_print(f"<td>{TEST_LEGEND[status]}</td></tr>")
@@ -272,6 +287,7 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
     # Build the data rows, grouping libraries together. Each row corresponds to
     # a sketch, each cell to the test result icon of that sketch on that board.
     data_rows = []
+    invalid_exceptions = defaultdict(set)
     for group in sorted(sketch_groups.keys()):
         if group:
             data_rows.append(f"<tr><th colspan='2' align='left'><code>{group}</code></th><th colspan={len(artifact_boards)}><code>{group}</code></th></tr>")
@@ -289,9 +305,13 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
             for board in artifact_boards:
                 test = next((test for test in res.tests if test.board == board), None)
                 status = test.status if test else SKIP
-                issues = test.issues if test else ""
-
-                row_data += f"<td align='center'>{TEST_STATUS[status]}</td>"
+                invalid = test.invalid_exception if test else False
+                if invalid and status in (PASS, WARNING):
+                    status_icon = ":interrobang:"
+                    invalid_exceptions[board].add(sketch)
+                else:
+                    status_icon = TEST_STATUS[status]
+                row_data += f"<td align='center'>{status_icon}</td>"
 
             row_data += "</tr>"
             data_rows.append(row_data)
@@ -305,6 +325,17 @@ def print_test_matrix(artifact, artifact_boards, title, sketch_filter=lambda x: 
     for row in data_rows:
         f_print(row)
     f_print("</table>\n")
+
+    if invalid_exceptions:
+        f_print(f"<details><summary><code>{artifact}</code> :interrobang: unnecessary <code>known_example_issues.txt</code> entries</summary>")
+        f_print("<blockquote><br><table><tr><th>Board</th><th>Sketch</th></tr>")
+        for board in sorted(invalid_exceptions.keys()):
+            sketches = sorted(invalid_exceptions[board])
+            first_row_text = f"<td rowspan={len(sketches)}><code>{board}</code></td>"
+            for sketch in sketches:
+                f_print(f"<tr>{first_row_text}<td><code>{sketch}</code></td></tr>")
+                first_row_text = ""
+        f_print("</table></blockquote></details>\n")
 
     # Print detailed logs for sketches with issues
     for group in sorted(sketch_groups.keys()):
@@ -394,6 +425,15 @@ for board_data in ALL_BOARD_DATA.values():
         log_test(artifact, board, 'CI test', '', [], FAILURE, "Core data could not be read.")
         continue
 
+    # Get list of expected errors for this board/variant
+    exceptions = []
+    if os.path.exists(f"variants/{variant}/known_example_issues.txt"):
+        with open(f"variants/{variant}/known_example_issues.txt", 'r') as f:
+            for line in f:
+                sketch_pattern = line.split('#')[0].strip()
+                if sketch_pattern:
+                    exceptions.append(re.compile(f"^(ArduinoCore-zephyr/)?{sketch_pattern}"))
+
     # Get job link for this test
     job_link = JOB_URLS.get(f"Test {board}")
     if job_link:
@@ -433,7 +473,7 @@ for board_data in ALL_BOARD_DATA.values():
         else:
             status = PASS
 
-        log_test(artifact, board, sketch, status, sketch_issues, job_link)
+        log_test(artifact, board, sketch, exceptions, status, sketch_issues, job_link)
 
 ARTIFACTS = sorted(ARTIFACT_TESTS.keys())
 
@@ -441,7 +481,7 @@ ARTIFACTS = sorted(ARTIFACT_TESTS.keys())
 # --------------------------
 
 ci_run_status = max(res.status for res in ARTIFACT_TESTS.values())
-ci_run_passed = ci_run_status in (PASS, WARNING)
+ci_run_passed = ci_run_status in (PASS, WARNING, EXPECTED_ERROR)
 
 # update the results file
 with open(results_file, 'w') as f:
@@ -467,7 +507,8 @@ with open(full_report_file, 'w') as f:
 
         f_print(f"<a name='{artifact}'></a>")
         f_print("\n---\n")
-        print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status == ERROR)
+
+        print_test_matrix(artifact, artifact_boards, "issues", sketch_filter=lambda res: res.status in (ERROR, EXPECTED_ERROR) or res.tests_with_invalid_exceptions)
 
         # print successful tests matrix in a collapsible section
         successful_tests = ARTIFACT_TESTS[artifact].counts[PASS] + ARTIFACT_TESTS[artifact].counts[WARNING]
