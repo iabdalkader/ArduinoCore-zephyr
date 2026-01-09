@@ -1,8 +1,10 @@
 name: Package, test and upload core
 
 on:
-  - push
-  - pull_request
+  push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
 
