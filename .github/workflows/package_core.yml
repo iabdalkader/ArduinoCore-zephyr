@@ -133,6 +133,7 @@ jobs:
       - build-env
       - build-board
     env:
+      ALL_BOARD_DATA: ${{ needs.build-env.outputs.ALL_BOARD_DATA }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}
       CORE_TAG: ${{ needs.build-env.outputs.CORE_TAG }}
     strategy:
@@ -179,7 +180,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - package-core
-    if: always()
     steps:
       - uses: geekyeggo/delete-artifact@v5.1.0
         with:
@@ -204,8 +204,19 @@ jobs:
       PLAT: arduino:${{ matrix.subarch }}
       FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}
+      ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
+
+      # only needs the test list generator and artifact information
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            extra/ci_test_list.sh
+            extra/artifacts/
+
       - uses: actions/download-artifact@v4
         with:
           name: ${{ env.CORE_ARTIFACT }}
@@ -215,22 +226,25 @@ jobs:
           tar xf ${CORE_ARTIFACT}.tar.bz2 # will create ArduinoCore-zephyr/
           echo "REPORT_FILE=$(echo ${FQBN} | tr ':' '-').json" >> $GITHUB_ENV
 
-      - name: Create Blink sketch
+      - name: Get test sketches
         run: |
-          mkdir Blink/
-          wget -nv https://raw.githubusercontent.com/arduino/arduino-examples/refs/heads/main/examples/01.Basics/Blink/Blink.ino -P Blink/
+          # sets ALL_TESTS and ALL_LIBRARIES env vars in GITHUB_ENV
+          extra/ci_test_list.sh ${{ matrix.artifact }} ${{ matrix.variant }}
 
-      - name: Compile Blink for ${{ matrix.board }}
+      - name: Compile tests for ${{ matrix.board }}
         uses: pillo79/compile-sketches@main
         with:
           fqbn: ${{ env.FQBN }}
           platforms: |
-            # Use Board Manager to install the latest release of Arduino Zephyr Boards to get the toolchain
-            - name: "arduino:zephyr"
-              source-url: "https://downloads.arduino.cc/packages/package_zephyr_index.json"
+            # Use Board Manager version first to install the tools
+            - name: ${{ env.PLAT }}
+            # ... then replace that with the local version
             - name: ${{ env.PLAT }}
               source-path: "ArduinoCore-zephyr"
-          sketch-paths: Blink
+          sketch-paths: |
+            ${{ env.ALL_TESTS }}
+          libraries: |
+            ${{ env.ALL_LIBRARIES }}
           cli-compile-flags: |
             - '--build-property'
             - 'compiler.c.extra_flags=-Wno-type-limits -Wno-missing-field-initializers'
@@ -264,7 +278,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ success() || failure() }}
         with:
-          name: test-report-${{ needs.build-env.outputs.CORE_TAG }}-${{ matrix.board }}
+          name: test-report-${{ env.ARTIFACT_TAG }}
           path: sketches-reports/*
 
   collect-logs:
