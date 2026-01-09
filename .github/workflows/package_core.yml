@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+env:
+  # use the head SHA for PR hashes, instead of the merge commit
+  HEAD_REF: ${{ github.event.pull_request.head.sha || github.ref }}
+
 jobs:
 
   build-env:
@@ -35,7 +39,8 @@ jobs:
       - name: Initialize Zephyr environment
         run: |
           yes | ./extra/bootstrap.sh -o=--filter=tree:0
-          echo "CORE_HASH=$(git describe --always)" >> "$GITHUB_ENV"
+          # Set up basic environment for later steps
+          echo "CORE_HASH=$(git describe --always $HEAD_REF)" >> "$GITHUB_ENV"
           echo "ALL_BOARD_DATA=$(extra/get_board_details.sh | jq -c 'sort_by(.variant)')" >> "$GITHUB_ENV"
           echo "## Building \`$(extra/get_core_version.sh)\`" >> "$GITHUB_STEP_SUMMARY"
 
