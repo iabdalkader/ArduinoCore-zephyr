@@ -484,6 +484,7 @@ def print_mem_report(artifact, artifact_boards):
     f_print("<th rowspan='2'>SoC</th>", end='')
     f_print("<th rowspan='2'>FLASH</th>", end='')
     f_print("<th rowspan='2'>RAM</th>", end='')
+    f_print("<th rowspan='2'>User<br>sketch</th>", end='')
     f_print("<th colspan='2'>User heaps</th>", end='')
     f_print("<th colspan='2'>OS heaps</th>", end='')
     f_print("</tr>")
@@ -501,6 +502,7 @@ def print_mem_report(artifact, artifact_boards):
                 f"<code>{soc}</code>",
                 color_entry(BOARD_LOADERS[board].meminfo['FLASH']),
                 color_entry(BOARD_LOADERS[board].meminfo['RAM']),
+                f"${{{ BOARD_LOADERS[board].meminfo['SKETCH'][1] }}}$",
                 f"${{{ BOARD_LOADERS[board].config.get('CONFIG_HEAP_MEM_POOL_SIZE', 0) }}}$",
                 f"${{{ BOARD_LOADERS[board].config['CONFIG_SRAM_SIZE']*1024 - BOARD_LOADERS[board].meminfo['RAM'][0] }}}$",
                 f"${{{ BOARD_LOADERS[board].config['CONFIG_LLEXT_HEAP_SIZE']*1024 }}}$",
@@ -509,7 +511,7 @@ def print_mem_report(artifact, artifact_boards):
 
         # Print each cell with its own alignment
         f_print("<tr>")
-        col_aligns = ['center', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right']
+        col_aligns = ['center', 'left', 'center', 'right', 'right', 'right', 'right', 'right', 'right', 'right']
         for index, cell in enumerate(row):
             f_print(f"<td align='{col_aligns[index]}'>\n\n{cell}\n\n</td>")
         f_print("</tr>")
@@ -519,7 +521,7 @@ def print_mem_report(artifact, artifact_boards):
     extra_data_present = False
     for soc in sorted(list(set([ ALL_BOARD_DATA[board]['soc'] for board in artifact_boards ]))):
         soc_boards = [ board for board in artifact_boards if ALL_BOARD_DATA[board]['soc'] == soc ]
-        sorted_regions = sorted(r for r in REGIONS_BY_SOC[soc] if r not in ('FLASH', 'RAM'))
+        sorted_regions = sorted(r for r in REGIONS_BY_SOC[soc] if r not in ('FLASH', 'RAM', 'SKETCH'))
         if not sorted_regions:
             continue
 

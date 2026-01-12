@@ -158,9 +158,15 @@ jobs:
           grep -i "warning:" $REPORT.stdout > $REPORT.warnings || true
 
           # extract the memory usage table (from the header to the first non-% line)
+          # override the size of the Flash with the size of the loader partition
+          # and add the size of the sketch partition (not reported by Zephyr)
+          LOADER_SIZE=$(( $(cat variants/${{ matrix.variant }}/syms-static.ld | grep '_loader_max_size' | cut -d '=' -f 2 | tr -d ') ;') ))
+          SKETCH_SIZE=$(( $(cat variants/${{ matrix.variant }}/syms-static.ld | grep '_sketch_max_size' | cut -d '=' -f 2 | tr -d ') ;') ))
           cat $REPORT.stdout | sed -n '/^Memory region/,/^[^%]*$/p' | head -n -1 \
                              | awk 'BEGIN {split("B KB MB GB", u); for(i in u) m[u[i]]=1024^(i-1)} /:/ {print "[\"" $1 "\"," $2*m[$3] "," $4*m[$5] "]"}' \
-                             | sort | jq -s > $REPORT.meminfo
+                             | sort \
+                             | jq -s "map((select(.[0] == \"FLASH:\") | .[2]) |= ${LOADER_SIZE}) + [ [ \"SKETCH:\", 0, ${SKETCH_SIZE} ] ]" > $REPORT.meminfo
+          jq
 
       - name: Package board artifacts
         if: ${{ !cancelled() }}
