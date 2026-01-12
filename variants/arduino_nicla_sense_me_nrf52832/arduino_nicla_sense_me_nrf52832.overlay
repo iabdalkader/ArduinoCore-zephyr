@@ -1,5 +1,15 @@
+/delete-node/ &slot0_partition;
+/delete-node/ &slot1_partition;
+/delete-node/ &scratch_partition;
+/delete-node/ &storage_partition;
+
 &flash0 {
 	partitions {
+		slot0_partition: partition@10000 {
+			label = "image-0";
+			reg = < 0x10000 0x60000 >;
+		};
+
 		user_sketch: partition@70000 {
 			label = "user";
 			reg = <0x070000 0x10000>;
