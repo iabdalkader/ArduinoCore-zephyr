@@ -38,6 +38,9 @@ jobs:
       CORE_HASH: ${{ env.CORE_HASH }}
       # JSON describing all boards to build, collected by get_board_details.sh
       ALL_BOARD_DATA: ${{ env.ALL_BOARD_DATA }}
+      # Extended version of ALL_BOARD_DATA with link_mode alternatives added
+      ALL_BOARD_FQBNS: ${{ env.ALL_BOARD_FQBNS }}
+      # List of artifacts to produce, including the "zephyr" umbrella artifact
       ARTIFACTS: ${{ env.ARTIFACTS }}
       # List of architectures the artifacts will be built for
       SUB_ARCHES: ${{ env.SUB_ARCHES }}
@@ -71,6 +74,7 @@ jobs:
         run: |
           echo "## Building \`$CORE_VER\`" >> "$GITHUB_STEP_SUMMARY"
           echo "CORE_TAG=$(git describe --tags --exact-match 2>/dev/null || echo $CORE_HASH)" >> "$GITHUB_ENV"
+          echo "ALL_BOARD_FQBNS=$(jq -c 'map((. + {link_mode: "static"}), (. + {link_mode: "dynamic"}))' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "ARTIFACTS=$(jq -c '["zephyr"] + (map(.artifact) | unique)' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           echo "SUB_ARCHES=$(jq -c 'map(.subarch) | unique' <<< ${ALL_BOARD_DATA})" >> "$GITHUB_ENV"
           # Archive the build environment for later jobs
@@ -281,7 +285,7 @@ jobs:
 
   test-core:
     # NOTE: this name is hardcoded in ci_inspect_logs.py
-    name: Test ${{ matrix.board }}
+    name: Test ${{ matrix.board }}:${{ matrix.link_mode }}
     runs-on: ubuntu-latest
     needs:
       - build-env
@@ -289,13 +293,13 @@ jobs:
     strategy:
       matrix:
         include:
-          ${{ fromJSON( needs.build-env.outputs.ALL_BOARD_DATA ) }}
+          ${{ fromJSON( needs.build-env.outputs.ALL_BOARD_FQBNS ) }}
       fail-fast: false
     env:
       PLAT: arduino:${{ matrix.subarch }}
-      FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}
+      FQBN: arduino:${{ matrix.subarch }}:${{ matrix.board }}:link_mode=${{ matrix.link_mode }}
       CORE_ARTIFACT: ArduinoCore-${{ matrix.artifact }}-${{ needs.build-env.outputs.CORE_HASH }}
-      ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}
+      ARTIFACT_TAG: ${{ needs.build-env.outputs.CORE_HASH }}-${{ matrix.board }}-${{ matrix.link_mode }}
     if: ${{ !cancelled() && needs.build-env.result == 'success' }}
     steps:
 
