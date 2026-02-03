@@ -59,5 +59,6 @@ public:
 
 	int begin(bool blocking = true, uint64_t additional_event_mask = 0);
 
+	void end();
 	bool disconnect();
 };

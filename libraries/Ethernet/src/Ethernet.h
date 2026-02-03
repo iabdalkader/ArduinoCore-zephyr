@@ -52,8 +52,6 @@ public:
 		return begin(nullptr, ip, dns, gateway, subnet);
 	}
 
-	void end(void);
-
 	void setRetransmissionTimeout(uint16_t milliseconds);
 	void setRetransmissionCount(uint8_t num);
 };

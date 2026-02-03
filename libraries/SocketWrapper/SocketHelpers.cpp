@@ -156,6 +156,10 @@ int NetworkInterface::begin(bool blocking, uint64_t additional_event_mask) {
 	return (ret == 0) ? 1 : 0;
 }
 
+void NetworkInterface::end() {
+	disconnect();
+}
+
 bool NetworkInterface::disconnect() {
 	return (net_if_down(netif) == 0);
 }
