@@ -245,6 +245,8 @@
 / {
 	chosen {
 		zephyr,camera = &dcmi;
+		zephyr,display = &ltdc;
+		zephyr,mipi-dsi = &mipi_dsi;
 		zephyr,console = &usart6;
 		zephyr,shell-uart = &usart6;
 		zephyr,cdc-acm-uart0 = &usart6;
@@ -393,5 +395,81 @@ qspi_flash: &mx25l12833f {};
 			      <&adc1 3>,
 			      <&adc1 12>, /* Hack for D19 */
 			      <&adc1 13>; /* Hack for D20 */
+	};
+};
+
+&sdram1 {
+	/* Frame buffer memory cache will cause screen flickering. */
+	zephyr,memory-attr = <( DT_MEM_ARM(ATTR_MPU_RAM_NOCACHE) )>;
+};
+
+/*
+ *PLL3 calculation for 1024x768@60Hz (57.8 MHz pixel clock)
+ * Portenta H7 uses 25 MHz HSE crystal
+ * VCO input = HSE / div-m = 25 MHz / 25 = 1 MHz
+ * VCO output = VCO input × mul-n = 1 MHz × 289 = 289 MHz
+ * Pixel clock = VCO output / div-r = 289 MHz / 5 = 57.8 MHz
+ */
+&pll3 {
+	status = "okay";
+	clocks = <&clk_hse>;
+	div-m = <25>;   /* HSE_VALUE/1MHz: 25MHz/25 = 1 MHz VCO input */
+	mul-n = <289>;  /* pixelclock/200kHz: 57800/200 = 289 */
+	div-p = <2>;
+	div-q = <7>;
+	div-r = <5>;    /* 1000/200kHz = 5 -> 289MHz/5 = 57.8 MHz */
+};
+
+&ltdc {
+	status = "okay";
+	ext-sdram = <&sdram1>;
+	width = <1024>;
+	height = <768>;
+	def-back-color-red = <0>;
+	def-back-color-green = <0>;
+	def-back-color-blue = <0>;
+	pixel-format = <PANEL_PIXEL_FORMAT_RGB_565>;
+
+	display-timings {
+		compatible = "zephyr,panel-timing";
+		hsync-active = <0>;
+		vsync-active = <0>;
+		de-active = <0>;
+		pixelclk-active = <0>;
+		hsync-len = <68>;
+		hfront-porch = <24>;
+		hback-porch = <80>;
+		vsync-len = <6>;
+		vfront-porch = <3>;
+		vback-porch = <29>;
+	};
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	pll-ndiv = <40>;
+	pll-idf = <2>;
+	pll-odf = <0>;
+
+	de-active-high;
+	bta-ack-disable;  /* ANX7625 bridge doesn't respond to BTA requests */
+	largest-packet-size = <16>;
+
+	phy-timings = <35 35 35 35 0 10>;
+
+	/*
+	 * This binding allows adding child node with with data-lanes property
+	 * as required by STM32 MIPI-DSI driver.
+	 */
+	anx7625: anx7625@0 {
+		status = "okay";
+		compatible = "analogix,anx7625";
+		reg = <0>;  /* Virtual channel 0 */
+		pixel-format = <0>;  /* Not used */
+		data-lanes = <2>;  /* 2 data lanes */
+		video-on-gpios = <&gpiok 2 GPIO_ACTIVE_HIGH>;
+		video-rst-gpios = <&gpioj 3 GPIO_ACTIVE_HIGH>;
+		otg-on-gpios = <&gpioj 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
 	};
 };
