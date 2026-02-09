@@ -12,70 +12,92 @@
        extern void name(void); \
        EXPORT_SYMBOL(name);
 
-EXPORT_SYMBOL(strrchr);
-EXPORT_SYMBOL(strstr);
-EXPORT_SYMBOL(strncmp);
-EXPORT_SYMBOL(strncpy);
-EXPORT_SYMBOL(strcasecmp);
-EXPORT_SYMBOL(strtod);
-EXPORT_SYMBOL(strtol);
-EXPORT_SYMBOL(strtoul);
-EXPORT_SYMBOL(strcmp);
-EXPORT_SYMBOL(strlen);
-EXPORT_SYMBOL(strchr);
-EXPORT_SYMBOL(strcat);
-EXPORT_SYMBOL(memmove);
+/*
+ * Libc functions are exported with a __real_ prefix so that the sketch
+ * core can provide long-call trampolines under the original names.
+ * This avoids R_ARM_THM_JUMP24 / R_ARM_THM_CALL relocations that would
+ * fail when the LLEXT is loaded in a different memory region (>16 MB away).
+ */
+#define EXPORT_LIBC_SYM(name) EXPORT_SYMBOL_NAMED(name, __real_##name)
+
+// string.h
+EXPORT_LIBC_SYM(memcpy);
+EXPORT_LIBC_SYM(memmove);
+EXPORT_LIBC_SYM(strrchr);
+EXPORT_LIBC_SYM(strstr);
+EXPORT_LIBC_SYM(strncmp);
+EXPORT_LIBC_SYM(strncpy);
+EXPORT_LIBC_SYM(strcasecmp);
+EXPORT_LIBC_SYM(strcmp);
+EXPORT_LIBC_SYM(strlen);
+EXPORT_LIBC_SYM(strchr);
+EXPORT_LIBC_SYM(strcat);
+
+// stdlib.h
+EXPORT_LIBC_SYM(malloc);
+EXPORT_LIBC_SYM(realloc);
+EXPORT_LIBC_SYM(calloc);
+EXPORT_LIBC_SYM(free);
+EXPORT_LIBC_SYM(rand);
+EXPORT_LIBC_SYM(srand);
+EXPORT_LIBC_SYM(strtod);
+EXPORT_LIBC_SYM(strtol);
+EXPORT_LIBC_SYM(strtoul);
+EXPORT_LIBC_SYM(atoi);
+EXPORT_LIBC_SYM(atof);
+EXPORT_LIBC_SYM(atol);
+EXPORT_LIBC_SYM(abort);
+EXPORT_LIBC_SYM(exit);
+EXPORT_LIBC_SYM(atexit);
+extern void _exit(int);
+EXPORT_LIBC_SYM(_exit);
+
+// ctype.h
+EXPORT_LIBC_SYM(isspace);
+EXPORT_LIBC_SYM(isalnum);
+EXPORT_LIBC_SYM(tolower);
+EXPORT_LIBC_SYM(toupper);
+EXPORT_LIBC_SYM(isalpha);
+EXPORT_LIBC_SYM(iscntrl);
+EXPORT_LIBC_SYM(isdigit);
+EXPORT_LIBC_SYM(isgraph);
+EXPORT_LIBC_SYM(isprint);
+EXPORT_LIBC_SYM(isupper);
+EXPORT_LIBC_SYM(islower);
+EXPORT_LIBC_SYM(isxdigit);
+
+// math.h
+EXPORT_LIBC_SYM(acos);
+EXPORT_LIBC_SYM(acosf);
+EXPORT_LIBC_SYM(asin);
+EXPORT_LIBC_SYM(asinf);
+EXPORT_LIBC_SYM(atan);
+EXPORT_LIBC_SYM(atan2);
+EXPORT_LIBC_SYM(atan2f);
+EXPORT_LIBC_SYM(atanf);
+EXPORT_LIBC_SYM(cos);
+EXPORT_LIBC_SYM(cosf);
+EXPORT_LIBC_SYM(exp);
+EXPORT_LIBC_SYM(exp2);
+EXPORT_LIBC_SYM(log);
+EXPORT_LIBC_SYM(logf);
+EXPORT_LIBC_SYM(log2);
+EXPORT_LIBC_SYM(log10);
+EXPORT_LIBC_SYM(pow);
+EXPORT_LIBC_SYM(sin);
+EXPORT_LIBC_SYM(sinf);
+EXPORT_LIBC_SYM(sqrt);
+EXPORT_LIBC_SYM(sqrtf);
+EXPORT_LIBC_SYM(tan);
+EXPORT_LIBC_SYM(tanf);
+
+// stdio.h
+EXPORT_LIBC_SYM(puts);
+EXPORT_LIBC_SYM(putchar);
+EXPORT_LIBC_SYM(vsnprintf);
 
 EXPORT_SYMBOL(k_malloc);
 EXPORT_SYMBOL(k_free);
-EXPORT_SYMBOL(malloc);
-EXPORT_SYMBOL(realloc);
-EXPORT_SYMBOL(calloc);
-EXPORT_SYMBOL(free);
-EXPORT_SYMBOL(rand);
-EXPORT_SYMBOL(srand);
-
-EXPORT_SYMBOL(atoi);
-EXPORT_SYMBOL(atof);
-EXPORT_SYMBOL(atol);
-EXPORT_SYMBOL(isspace);
-EXPORT_SYMBOL(isalnum);
-EXPORT_SYMBOL(tolower);
-EXPORT_SYMBOL(toupper);
-EXPORT_SYMBOL(isalpha);
-EXPORT_SYMBOL(iscntrl);
-EXPORT_SYMBOL(isdigit);
-EXPORT_SYMBOL(isgraph);
-EXPORT_SYMBOL(isprint);
-EXPORT_SYMBOL(isupper);
-EXPORT_SYMBOL(islower);
-EXPORT_SYMBOL(isxdigit);
-
-// From math.h
-EXPORT_SYMBOL(acos);
-EXPORT_SYMBOL(acosf);
-EXPORT_SYMBOL(asin);
-EXPORT_SYMBOL(asinf);
-EXPORT_SYMBOL(atan);
-EXPORT_SYMBOL(atan2);
-EXPORT_SYMBOL(atan2f);
-EXPORT_SYMBOL(atanf);
-EXPORT_SYMBOL(cos);
-EXPORT_SYMBOL(cosf);
-EXPORT_SYMBOL(exp);
-EXPORT_SYMBOL(exp2);
-EXPORT_SYMBOL(log);
-EXPORT_SYMBOL(logf);
-EXPORT_SYMBOL(log2);
-EXPORT_SYMBOL(log10);
-EXPORT_SYMBOL(pow);
-EXPORT_SYMBOL(sin);
-EXPORT_SYMBOL(sinf);
-EXPORT_SYMBOL(sqrt);
-EXPORT_SYMBOL(sqrtf);
-EXPORT_SYMBOL(tan);
-EXPORT_SYMBOL(tanf);
-
 EXPORT_SYMBOL(k_sched_lock);
 EXPORT_SYMBOL(k_sched_unlock);
 
@@ -231,17 +253,11 @@ EXPORT_SYMBOL(k_work_schedule);
 //FORCE_EXPORT_SYM(k_timer_user_data_set);
 //FORCE_EXPORT_SYM(k_timer_start);
 
-EXPORT_SYMBOL(puts);
-EXPORT_SYMBOL(putchar);
 EXPORT_SYMBOL(printf);
 EXPORT_SYMBOL(sprintf);
 EXPORT_SYMBOL(snprintf);
 EXPORT_SYMBOL(cbvprintf);
-EXPORT_SYMBOL(vsnprintf);
-FORCE_EXPORT_SYM(abort);
 EXPORT_SYMBOL(sscanf);
-EXPORT_SYMBOL(exit);
-FORCE_EXPORT_SYM(_exit);
 FORCE_EXPORT_SYM(__assert_no_args);
 EXPORT_SYMBOL(stdin);
 EXPORT_SYMBOL(stdout);
