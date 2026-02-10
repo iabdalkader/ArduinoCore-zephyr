@@ -70,7 +70,8 @@ build_json() {
 
 build_for_arch "linux" "amd64" "x86_64-linux-gnu"
 build_for_arch "linux" "arm64" "aarch64-linux-gnu"
-build_for_arch "darwin" "amd64" "i386-apple-darwin11"
+build_for_arch "darwin" "arm64" "arm64-apple-darwin"
+build_for_arch "darwin" "amd64" "x86_64-apple-darwin"
 build_for_arch "windows" "386" "i686-mingw32"
 if [ "${VERSION}" == "dev" ] ; then
 	echo "Build completed for $TOOL_NAME $VERSION in $DIR"

@@ -1,3 +1,6 @@
+# Copyright ARDUINO SRL (https://www.arduino.cc)
+# SPDX-License-Identifier: Apache-2.0
+
 # This file contains all the *static* files and directories that will be added
 # to any core package archive.
 #

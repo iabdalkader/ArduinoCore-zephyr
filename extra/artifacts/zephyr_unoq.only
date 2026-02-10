@@ -1,0 +1,9 @@
+# Copyright ARDUINO SRL (https://www.arduino.cc)
+# SPDX-License-Identifier: Apache-2.0
+
+# Files listed here are included by this package only, and automatically
+# excluded by all other artifacts.
+
+libraries/Arduino_LED_Matrix/
+libraries/Arduino_RouterBridge/
+libraries/Arduino_RPClite/
