@@ -1,16 +1,5 @@
-&flash0 {
-	partitions {
-		compatible = "fixed-partitions";
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		/* Arduino user sketch partition */
-		user_sketch: partition@C4000 {
-			reg = <0x000C4000 0x000B8000>;
-			label = "user";
-		};
-	};
-};
+/* Arduino user sketch partition */
+user_sketch: &slot1_partition {};
 
 / {
 	zephyr,user {

@@ -33,8 +33,6 @@ void arduino::ZephyrSPI::transfer(void *buf, size_t count) {
 }
 
 int arduino::ZephyrSPI::transfer(void *buf, size_t len, const struct spi_config *config) {
-	int ret;
-
 	const struct spi_buf tx_buf = {.buf = buf, .len = len};
 	const struct spi_buf_set tx_buf_set = {
 		.buffers = &tx_buf,
@@ -51,9 +49,11 @@ int arduino::ZephyrSPI::transfer(void *buf, size_t len, const struct spi_config 
 }
 
 void arduino::ZephyrSPI::usingInterrupt(int interruptNumber) {
+	ARG_UNUSED(interruptNumber);
 }
 
 void arduino::ZephyrSPI::notUsingInterrupt(int interruptNumber) {
+	ARG_UNUSED(interruptNumber);
 }
 
 void arduino::ZephyrSPI::beginTransaction(SPISettings settings) {
@@ -96,12 +96,12 @@ void arduino::ZephyrSPI::beginTransaction(SPISettings settings) {
 	// Set SPI configuration structure for 8-bit transfers
 	memset(&config, 0, sizeof(struct spi_config));
 	config.operation = mode | SPI_WORD_SET(8);
-	config.frequency = max(SPI_MIN_CLOCK_FREQUENCY, settings.getClockFreq());
+	config.frequency = max((uint32_t)SPI_MIN_CLOCK_FREQUENCY, settings.getClockFreq());
 
 	// Set SPI configuration structure for 16-bit transfers
 	memset(&config16, 0, sizeof(struct spi_config));
 	config16.operation = mode | SPI_WORD_SET(16);
-	config16.frequency = max(SPI_MIN_CLOCK_FREQUENCY, settings.getClockFreq());
+	config16.frequency = max((uint32_t)SPI_MIN_CLOCK_FREQUENCY, settings.getClockFreq());
 }
 
 void arduino::ZephyrSPI::endTransaction(void) {

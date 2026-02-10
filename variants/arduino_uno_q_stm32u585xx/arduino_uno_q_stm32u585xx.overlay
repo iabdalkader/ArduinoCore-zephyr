@@ -54,13 +54,28 @@
 };
 */
 
+/delete-node/ &slot0_partition;
+/delete-node/ &slot1_partition;
+/delete-node/ &scratch_partition;
+/delete-node/ &storage_partition;
+
 &flash0 {
 	partitions {
-		bootanimation: partition@90000 {
-			reg = <0x090000 DT_SIZE_K(64)>;
+		slot0_partition: partition@10000 {
+			label = "image-0";
+			reg = < 0x10000 DT_SIZE_K(768) >;
 		};
-		user_sketch: partition@f0000 {
-			reg = <0x0F0000 DT_SIZE_K(64)>;
+
+		bootanimation: partition@d0000 {
+			reg = < 0xd0000 DT_SIZE_K(192) >;
+		};
+
+		user_sketch: partition@100000 {
+			reg = < 0x100000 DT_SIZE_K(768) >;
+		};
+
+		storage_partition: partition@1c0000 {
+			reg = < 0x1c0000 DT_SIZE_K(256) >;
 		};
 	};
 };

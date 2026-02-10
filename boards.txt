@@ -667,7 +667,7 @@ unoq.vid.0=0x2341
 unoq.pid.0=0x0078
 unoq.upload_port.0.vid=0x2341
 unoq.upload_port.0.pid=0x0078
-unoq.upload.address=0x80F0000
+unoq.upload.address=0x8100000
 unoq.upload.target=stm32u585zitxq
 
 unoq.upload.tool=remoteocd
