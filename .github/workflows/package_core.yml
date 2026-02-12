@@ -7,9 +7,11 @@ name: Package, test and upload core
 
 on:
   push:
-    branches:
-      - main
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.actor }}
+  cancel-in-progress: true
 
 env:
   # use the head SHA for PR hashes, instead of the merge commit
@@ -87,12 +89,14 @@ jobs:
         with:
           name: build-env
           path: ~/build-env.tar.zstd
+          retention-days: 1
 
       - name: Archive API snapshot
         uses: actions/upload-artifact@v4
         with:
           name: arduino-api
           path: arduino-api.tar.zstd
+          retention-days: 1
 
 
 
@@ -370,6 +374,7 @@ jobs:
         with:
           name: test-report-${{ env.ARTIFACT_TAG }}
           path: sketches-reports/*
+          retention-days: 1
 
 
 
