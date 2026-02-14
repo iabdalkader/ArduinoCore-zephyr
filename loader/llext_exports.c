@@ -30,6 +30,7 @@ EXPORT_LIBC_SYM(strncpy);
 EXPORT_LIBC_SYM(strcasecmp);
 EXPORT_LIBC_SYM(strcmp);
 EXPORT_LIBC_SYM(strlen);
+EXPORT_LIBC_SYM(strnlen);
 EXPORT_LIBC_SYM(strchr);
 EXPORT_LIBC_SYM(strcat);
 

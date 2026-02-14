@@ -66,6 +66,7 @@
 W3(void *, memcpy, void *, const void *, size_t)
 W3(void *, memmove, void *, const void *, size_t)
 W1(size_t, strlen, const char *)
+W2(size_t, strnlen, const char *, size_t)
 W2(char *, strchr, const char *, int)
 W2(char *, strrchr, const char *, int)
 W2(char *, strstr, const char *, const char *)
