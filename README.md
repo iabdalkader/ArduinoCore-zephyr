@@ -11,7 +11,7 @@ boards](https://github.com/zephyrproject-rtos/arduino-core-zephyr) that
 includes support for Arduino software tools, allowing it to be seamlessly used
 by the [Arduino IDE](https://docs.arduino.cc/software/ide/),
 [Arduino CLI](https://docs.arduino.cc/arduino-cli/) and
-[Arduino AppLab](https://docs.arduino.cc/software/app-lab/).
+[Arduino App Lab](https://docs.arduino.cc/software/app-lab/).
 
 ## 🧐 What is Zephyr? 
 
@@ -113,7 +113,9 @@ The most important components of this project are:
 > utility via `go build` and run it as `sync-zephyr-artifacts .` to retrieve
 > the precompiled files for the current revision of the core. 
 >
-> Next, follow the instructions in [Using the Core in Arduino IDE/CLI](#using-the-core-in-arduino-idecli).
+> Next, follow the instructions in [Using the Core in Arduino IDE/CLI](#using-the-core-in-arduino-idecli)
+> or [Using the Core in the Arduino App Lab](#using-the-core-in-the-arduino-app-lab) 
+> to start using the core in your preferred Arduino software.
 > Remember to [update the loader on your board](#flash-the-loader) as well.
 
 ## 🛠️ Setup a Zephyr build environment
@@ -139,7 +141,7 @@ Before running the installation script, ensure that Python, `pip` and `venv` are
 
 #### On Ubuntu or similar apt-based distros
 ```bash
-sudo apt install python3-pip python3-setuptools python3-venv build-essential git cmake ninja-build zstd jq
+sudo apt install python3-pip python3-setuptools python3-venv build-essential git cmake ninja-build zstd jq rsync
 ```
 #### On macOS
 Make sure you have Homebrew installed. Then run:
@@ -242,6 +244,12 @@ will be `arduino-git:zephyr:name_from_boards_txt`.
 
 Remember to also install and/or update the officially published core in the IDE Board Manager to get the latest tools and dependencies. 
 [⚙️ Installation](#️-installation).
+
+### Using the Core in the Arduino App Lab
+
+The Arduino App Lab currently relies on a specific FQBN in order to send
+board commands. To be able to use your custom core with the Arduino UNO Q,
+read [this guide](https://forum.arduino.cc/t/install-sources-built-zephyr-on-uno-q-for-applab/1429150/7).
 
 ## 🚀 Adding a new target
 
