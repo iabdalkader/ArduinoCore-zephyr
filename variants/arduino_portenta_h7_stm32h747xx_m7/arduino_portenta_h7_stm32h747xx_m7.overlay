@@ -288,18 +288,18 @@
 					#size-cells = <1>;
 
 					boot_partition: partition@0 {
-							label = "mcuboot";
-							reg = <0x00000000 0x00040000>;
-							read-only;
+						label = "mcuboot";
+						reg = <0x00000000 0x00040000>;
+						read-only;
 					};
 
 					slot0_partition: partition@40000 {
-							label = "image-0";
-							reg = <0x00040000 0x000A0000>;
+						label = "image-0";
+						reg = <0x00040000 0x000A0000>;
 					};
 
 					user_sketch: partition@e0000 {
-						reg = <0x0E0000 0x20000>;
+						reg = <0x000E0000 0x00040000>;
 					};
 				};
 			};
@@ -397,6 +397,12 @@ qspi_flash: &mx25l12833f {};
 			      <&adc1 13>; /* Hack for D20 */
 	};
 };
+
+&sram1 {
+	reg = <0x30000000 DT_SIZE_K(256)>;
+};
+
+/delete-node/ &sram2;
 
 &sdram1 {
 	/* Frame buffer memory cache will cause screen flickering. */
