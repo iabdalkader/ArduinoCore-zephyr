@@ -80,10 +80,10 @@ build.zsk_args.startup-mode-wait=
 build.zsk_args.startup-mode-immediate=-immediate
 
 # These can be overridden in platform.local.txt
-compiler.c.extra_flags=
+compiler.c.extra_flags="-DARDUINO_LV_CONF_PATH={build.source.path}/lv_conf_user.h"
 compiler.c.elf.extra_flags=
 compiler.S.extra_flags=
-compiler.cpp.extra_flags=
+compiler.cpp.extra_flags="-DARDUINO_LV_CONF_PATH={build.source.path}/lv_conf_user.h"
 compiler.ar.extra_flags=
 compiler.objcopy.eep.extra_flags=
 compiler.elf2hex.extra_flags=
