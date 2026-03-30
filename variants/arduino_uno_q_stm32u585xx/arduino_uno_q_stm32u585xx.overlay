@@ -92,6 +92,7 @@
 		};
 
 		storage_partition: partition@1c0000 {
+			label = "storage";
 			reg = < 0x1c0000 DT_SIZE_K(256) >;
 		};
 	};
@@ -375,5 +376,20 @@
 		dac = <&dac1>;
 		dac-channels = <1>, <2>;
 		dac-resolution = <12>;
+	};
+
+	fstab {
+		compatible = "zephyr,fstab";
+		storage_fs: storage_fs {
+			compatible = "zephyr,fstab,littlefs";
+			automount;
+			mount-point = "/storage";
+			partition = <&storage_partition>;
+			read-size = <16>;
+			prog-size = <8192>;
+			cache-size = <8192>;
+			lookahead-size = <32>;
+			block-cycles = <512>;
+		};
 	};
 };
