@@ -12,6 +12,7 @@ LOG_MODULE_REGISTER(sketch);
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/llext/llext.h>
 #include <zephyr/llext/buf_loader.h>
+#include <zephyr/llext/fs_loader.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/shell/shell_uart.h>
 #include <zephyr/logging/log_ctrl.h>
@@ -24,6 +25,10 @@ LOG_MODULE_REGISTER(sketch);
 #include <zephyr/usb/usb_device.h>
 
 #include <zephyr/devicetree/fixed-partitions.h>
+
+#if defined(CONFIG_EXTMGR)
+#include "extmgr.h"
+#endif
 
 #define HEADER_LEN 16
 
@@ -38,8 +43,6 @@ struct sketch_header_v1 {
 #define SKETCH_FLAG_LINKED       0x02
 #define SKETCH_FLAG_IMMEDIATE    0x04
 #define SKETCH_FLAG_WAIT_FOR_APP 0x08
-
-#define SKETCH_RAM_BUFFER_LEN 131072
 
 /* Need to replicate logic from zephyrSerial.h to avoid C++ here */
 #define ZARD_FIRST_SERIAL_IS_SERIALUSB                                                             \
@@ -137,6 +140,10 @@ static int loader(const struct shell *sh) {
 		return rc;
 	}
 
+#if defined(CONFIG_EXTMGR)
+	extmgr_init();
+#endif
+
 	bool sketch_valid = true;
 	struct sketch_header_v1 *sketch_hdr = (struct sketch_header_v1 *)(header + 7);
 	if (sketch_hdr->ver != 0x1 || sketch_hdr->magic != 0x2341) {
@@ -180,58 +187,18 @@ static int loader(const struct shell *sh) {
 #endif
 
 #if defined(CONFIG_BOARD_ARDUINO_UNO_Q)
-	void matrixBegin(void);
-	void matrixEnd(void);
-	void matrixPlay(uint8_t *buf, uint32_t len);
-	void matrixSetGrayscaleBits(uint8_t _max);
-	void matrixGrayscaleWrite(uint8_t *buf);
-#include "bootanimation.h"
-
-	uint8_t *_bootanimation = (uint8_t *)bootanimation;
-	size_t _bootanimation_len = bootanimation_len;
-	uint8_t *_bootanimation_end = (uint8_t *)bootanimation_end;
-	size_t _bootanimation_end_len = bootanimation_end_len;
-
-	__attribute__((packed)) struct bootanimation_user_data {
-		size_t magic; // must be 0xBA for bootanimation
-		size_t len_loop;
-		size_t len_end;
-		size_t empty;
-		char buf_loop;
-	};
-
 	backup.wait_for_app_magic = 0;
 
-	uintptr_t bootanimation_addr = DT_REG_ADDR(DT_GPARENT(DT_NODELABEL(bootanimation))) +
-								   DT_REG_ADDR(DT_NODELABEL(bootanimation));
-
-	struct bootanimation_user_data *user_bootanimation =
-		(struct bootanimation_user_data *)bootanimation_addr;
-	if (user_bootanimation->magic == 0xBA) {
-		_bootanimation = &(user_bootanimation->buf_loop);
-		_bootanimation_len = user_bootanimation->len_loop;
-		_bootanimation_end_len = user_bootanimation->len_end;
-		_bootanimation_end = _bootanimation + user_bootanimation->len_loop;
-	}
-
 	if ((!sketch_valid) || !(sketch_hdr->flags & SKETCH_FLAG_IMMEDIATE)) {
-		// Start the bootanimation while waiting for the MPU to boot
 		const struct gpio_dt_spec spec =
 			GPIO_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), control_gpios, 0);
 
 		gpio_pin_configure_dt(&spec, GPIO_INPUT | GPIO_PULL_DOWN);
 		k_sleep(K_MSEC(200));
-		if (gpio_pin_get_dt(&spec) == 0) {
-			matrixBegin();
-			matrixSetGrayscaleBits(8);
-			while (gpio_pin_get_dt(&spec) == 0) {
-				matrixPlay(_bootanimation, _bootanimation_len);
-			}
-			matrixPlay(_bootanimation_end, _bootanimation_end_len);
-			uint8_t _framebuffer[104] = {0};
-			matrixGrayscaleWrite(_framebuffer);
+
+		// Wait for the MPU to boot
+		while (gpio_pin_get_dt(&spec) == 0) {
 			k_sleep(K_MSEC(10));
-			matrixEnd();
 		}
 
 		if (sketch_hdr->flags & SKETCH_FLAG_WAIT_FOR_APP) {
