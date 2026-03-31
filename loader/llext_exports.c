@@ -354,6 +354,13 @@ FORCE_EXPORT_SYM(matrixSetGrayscaleBits);
 FORCE_EXPORT_SYM(matrixEnd);
 #endif
 
+#if defined(CONFIG_EXTMGR)
+#include "extmgr.h"
+EXPORT_SYMBOL(extmgr_load);
+EXPORT_SYMBOL(extmgr_unload);
+EXPORT_SYMBOL(extmgr_find_sym);
+#endif
+
 #if defined(CONFIG_FLASH)
 FORCE_EXPORT_SYM(flash_area_open);
 FORCE_EXPORT_SYM(flash_area_read);

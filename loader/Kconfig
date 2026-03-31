@@ -17,3 +17,15 @@ config MAIN_STACK_REGION
 	depends on CODE_DATA_RELOCATION
 	help
 	  Specify the memory region for main stack.
+
+config EXTMGR
+	bool "Extension manager"
+	depends on FILE_SYSTEM && LLEXT
+	select JSON_LIBRARY
+	help
+	  Enable the extension manager to load ELF extensions from
+	  a manifest file on the filesystem.
+
+module = EXTMGR
+module-str = extmgr
+source "subsys/logging/Kconfig.template.log_config"

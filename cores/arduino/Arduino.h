@@ -18,6 +18,18 @@
 
 extern volatile bool sketch_exit;
 
+#if defined(CONFIG_EXTMGR)
+#ifdef __cplusplus
+extern "C" {
+#endif
+void *extmgr_load(const char *name);
+void  extmgr_unload(void *handle);
+const void *extmgr_find_sym(void *handle, const char *sym);
+#ifdef __cplusplus
+}
+#endif
+#endif
+
 #if DT_PROP_LEN(DT_PATH(zephyr_user), digital_pin_gpios) > 0
 /* Note: DT_REG_ADDR needs an expanded argument or it will not work properly */
 #define DIGITAL_PIN_MATCHES(dev_pha, pin, dev, num)                                                \
