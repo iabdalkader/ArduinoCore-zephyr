@@ -23,6 +23,8 @@ void __attribute__((weak)) initVariant(void) {
 void __attribute__((weak)) __loopHook(void) {
 }
 
+volatile bool sketch_exit = false;
+
 int main(void) {
 #if ZARD_FIRST_SERIAL_IS_SERIALUSB
 	Serial.begin(115200);
@@ -36,7 +38,7 @@ int main(void) {
 
 	setup();
 
-	for (;;) {
+	for (;!sketch_exit;) {
 		loop();
 #if 0 //(DT_NODE_HAS_PROP(DT_PATH(zephyr_user), cdc_acm) && CONFIG_USB_CDC_ACM) ||
 	  // DT_NODE_HAS_PROP(DT_PATH(zephyr_user), serials)
