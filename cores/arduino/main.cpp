@@ -23,6 +23,12 @@ void __attribute__((weak)) initVariant(void) {
 void __attribute__((weak)) __loopHook(void) {
 }
 
+#if defined(ARDUINO_EXT_LIBRARY)
+extern "C" void _library_entry(void) {
+
+}
+#else
+
 volatile bool sketch_exit = false;
 
 int main(void) {
@@ -104,3 +110,4 @@ extern "C" __attribute__((section(".entry_point"), used)) void entry_point(struc
 	__libc_init_array();
 	main();
 }
+#endif /* !ARDUINO_EXT_LIBRARY */

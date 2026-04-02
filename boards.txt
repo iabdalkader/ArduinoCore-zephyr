@@ -1,6 +1,7 @@
 menu.debug=Debug
 menu.link_mode=Link mode
 menu.wait_linux_boot=Startup mode
+menu.sketch_type=Sketch type
 
 ##########################################################################################
 
@@ -316,6 +317,11 @@ portentah7.debug.server.openocd.scripts.1={programmer.transport_script}
 portentah7.debug.server.openocd.scripts.2=target/stm32h7x_dual_bank.cfg
 portentah7.debug.cortex-debug.custom.request=attach
 portentah7.debug.svd_file={runtime.platform.path}/svd/STM32H747_CM7.svd
+
+portentah7.menu.sketch_type.application=Application
+portentah7.menu.sketch_type.library=Loadable Library
+portentah7.menu.sketch_type.library.build.extra_flags=-DARDUINO_EXT_LIBRARY
+portentah7.menu.sketch_type.library.build.link_args.dynamic=-e _library_entry
 
 ##############################################################################################################
 
@@ -710,6 +716,11 @@ unoq.menu.wait_linux_boot.no=Immediate
 unoq.menu.wait_linux_boot.no.build.boot_mode=immediate
 unoq.menu.wait_linux_boot.app=Wait for App
 unoq.menu.wait_linux_boot.app.build.boot_mode=app
+
+unoq.menu.sketch_type.application=Application
+unoq.menu.sketch_type.library=Loadable Library
+unoq.menu.sketch_type.library.build.extra_flags=-DARDUINO_EXT_LIBRARY
+unoq.menu.sketch_type.library.build.link_args.dynamic=-e _library_entry
 
 unoq.build.zephyr_target=arduino_uno_q
 unoq.build.zephyr_args=
