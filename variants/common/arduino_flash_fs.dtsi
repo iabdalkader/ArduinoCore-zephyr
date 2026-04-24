@@ -85,7 +85,7 @@
 		cache-size = <4096>;
 	};
 
-	fstab {
+	fstab: fstab {
 		compatible = "zephyr,fstab";
 
 		wlan_fs: wlan_fs {
