@@ -381,6 +381,38 @@ EXPORT_AEABI_SYM(__aeabi_uidivmod);
 EXPORT_AEABI_SYM(__aeabi_ldivmod);
 EXPORT_AEABI_SYM(__aeabi_uldivmod);
 
+#if defined(CONFIG_ARM)
+/* ARM EABI thread pointer access (used by TLS variable references) */
+extern uint32_t __aeabi_read_tp(void);
+EXPORT_LIBC_SYM(__aeabi_read_tp);
+
+/*
+ * Thumb1 switch-dispatch helpers.
+ *
+ * Note the loader exports these symbols directly and relies on llext
+ * generating ARMv6 veneer on the fly.
+ */
+extern void __gnu_thumb1_case_uqi(void);
+EXPORT_SYMBOL(__gnu_thumb1_case_uqi);
+extern void __gnu_thumb1_case_sqi(void);
+EXPORT_SYMBOL(__gnu_thumb1_case_sqi);
+extern void __gnu_thumb1_case_uhi(void);
+EXPORT_SYMBOL(__gnu_thumb1_case_uhi);
+extern void __gnu_thumb1_case_shi(void);
+EXPORT_SYMBOL(__gnu_thumb1_case_shi);
+extern void __gnu_thumb1_case_si(void);
+EXPORT_SYMBOL(__gnu_thumb1_case_si);
+
+/* 64-bit integer multiply runtime helper */
+FORCE_EXPORT_SYM(__aeabi_lmul);
+#endif
+
+#if defined(CONFIG_BOARD_ARDUINO_NANO_CONNECT)
+/* defined in loader/fixups.c, written by variant's _on_1200_bps() */
+extern uint32_t magic_location[3];
+EXPORT_SYMBOL(magic_location);
+#endif
+
 #if defined(CONFIG_CPP)
 FORCE_EXPORT_SYM(__cxa_pure_virtual);
 #endif
@@ -444,6 +476,6 @@ EXPORT_SYMBOL(arm_irq_is_enabled);
 EXPORT_SYMBOL(arm_irq_priority_set);
 #endif
 
-#if defined(__arm__)
+#if defined(__arm__) && !defined(CONFIG_SOC_FAMILY_RPI_PICO)
 EXPORT_SYMBOL(SystemCoreClock);
 #endif
